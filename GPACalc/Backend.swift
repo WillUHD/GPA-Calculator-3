@@ -148,7 +148,7 @@ final class Backend: ObservableObject {
     // MARK: - Update loading
     func loadInitialData() {
         if let docDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-            let savedURL = docDir.appendingPathComponent("Courses.json")
+            let savedURL = docDir.appendingPathComponent("Courses.gpa")
             if FileManager.default.fileExists(atPath: savedURL.path) {
                 do {
                     let data = try Data(contentsOf: savedURL)
@@ -158,12 +158,12 @@ final class Backend: ObservableObject {
                     Updater.shared.checkForUpdates(currentVersion: parsed.version)
                     return
                 } catch {
-                    print("Backend: failed to decode saved Courses.json: \(error)")
+                    print("Backend: failed to decode saved Courses.gpa: \(error)")
                 }
             }
         }
 
-        if let bundleURL = Bundle.main.url(forResource: "Courses", withExtension: "json") {
+        if let bundleURL = Bundle.main.url(forResource: "Courses", withExtension: "gpa") {
             do {
                 let data = try Data(contentsOf: bundleURL)
                 let stripped = Updater.shared.stripCommentLines(from: data)
@@ -172,7 +172,7 @@ final class Backend: ObservableObject {
                 Updater.shared.checkForUpdates(currentVersion: parsed.version)
                 return
             } catch {
-                print("Backend: failed to decode bundled Courses.json: \(error)")
+                print("Backend: failed to decode bundled Courses.gpa: \(error)")
             }
         }
 
@@ -257,7 +257,7 @@ final class Backend: ObservableObject {
 
         // fallback, reread from disk
         if let docDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-            let fileURL = docDir.appendingPathComponent("Courses.json")
+            let fileURL = docDir.appendingPathComponent("Courses.gpa")
             if let data = try? Data(contentsOf: fileURL) {
                 let stripped = Updater.shared.stripCommentLines(from: data)
                 if Thread.isMainThread { apply(stripped) }

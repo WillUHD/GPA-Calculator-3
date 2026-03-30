@@ -6,62 +6,8 @@
 //    Course edition: Spring 2026
 //    Huge props to Michel!
 //
-// To keep course information internal, there is a proprietary license.
-//
-// EMBEDDED LICENSE:
-// Copyright (c) 2026 Will Chen (willuhd). All rights reserved.
-//
-//    This file and the code / documentation contained in it is fully proprietary.
-//    They belong to the repository owner (willuhd). ALL RIGHTS RESERVED.
-//
-//    1. Ownership
-//        This software, including all source code, assets, documentation, and
-//        associated files (“Software”), is the exclusive property of the copyright holder
-//        willuhd. No ownership rights are transferred to anyone else.
-//
-//    2. License Grant
-//        No rights are granted to use, copy, modify, merge, publish, distribute, sublicense,
-//        sell, or otherwise exploit the Software unless express written permission is
-//        provided by the copyright holder willuhd.
-//
-//    3. Internal Use Restriction
-//        If written permission is granted, such permission applies only to internal use
-//        within the project "michelg10/GPA-Calculator". The Software may not be used in
-//        any other project, product, service, or environment without additional written
-//        authorization.
-//
-//    4. Prohibited Actions
-//        Unless prior written permission is provided, you may not:
-//          - Use the Software for any purpose.
-//          - Copy or redistribute the Software in any form.
-//          - Modify, adapt, translate, or create derivative works of the Software.
-//          - Reverse-engineer or try to build a public rip-off competitor to the Software.
-//          - Remove, alter, or obscure copyright notices, author credits, or attribution
-//            within the Software (including this one).
-//          - Claim authorship, ownership, or contribution to the Software, including
-//            through superficial changes such as variable renaming, formatting adjustments,
-//            changing headers, or other minimal alterations that can be easily traced
-//            back to the original source.
-//
-//    5. Allowed Actions
-//        You may request usage of the Software from its original owner. Under Fair Use,
-//        you are allowed to read, reference, quote, or parse the source code from its
-//        original source "willuhd/GPAResources", with no intent of the Prohibited Actions,
-//        while crediting the owner via a direct, obvious, non-misleading, non-hidden
-//        hyperlink, leading to the project repository and/or the owner themselves.
-//
-//    6. Attribution Protection
-//        You may not remove, replace, or modify the author’s name, copyright notice,
-//        or credits. Any attempt to re‑publish the Software under a different name
-//        or claim any kind of authorship is strictly prohibited.
-//
-//    7. Termination
-//        Any unauthorized use of the Software immediately requires you to remove all
-//        instances of the Software that you have infringed.
-//
-//    8. Governing Law
-//        This license is governed by the laws of the jurisdiction in which the copyright
-//        holder resides, without regard to conflict‑of‑law principles.
+// To keep course information internal to SHSID, there is a proprietary license.
+// All rights reserved.
 //
 
 { "catalogName": "SHSID Course Catalog",

@@ -49,10 +49,7 @@ struct ContentView: View {
 
                     Button(action: {
                         Haptic.medium()
-                        for idx in 0..<backend.activeSubjects.count {
-                            backend.setScoreIndex(0, for: idx)
-                            backend.setLevelIndex(0, for: idx)
-                        }
+                        backend.resetAllLevelsAndScores()
                     }) {
                         Text("Reset")
                             .font(.system(size: 18, weight: .medium))
@@ -66,7 +63,7 @@ struct ContentView: View {
 
                 ScrollView {
                     VStack(spacing: 12) {
-                        ForEach(Array(backend.activeSubjects.enumerated()), id: \.1.stableId) { idx, subject in
+                        ForEach(Array(backend.activeSubjects.enumerated()), id: \.element.stableId) { idx, subject in
                             SubjectRowView(subject: subject, index: idx, backend: backend)
                                 .padding(.horizontal, 16)
                         }
@@ -88,43 +85,39 @@ struct SubjectRowView: View {
     let index: Int
     @ObservedObject var backend: Backend
 
-    // compute a dynamic index each time the view renders so bindings remain correct
-    private var dynamicIndex: Int {
-        backend.activeSubjects.firstIndex(where: { $0.stableId == subject.stableId }) ?? index
+    private var liveSubject: CourseModel.Subject {
+        backend.activeSubjects.indices.contains(index) ? backend.activeSubjects[index] : subject
     }
 
     var body: some View {
+        let currentSubj = liveSubject
+        
         VStack(spacing: 8) {
             HStack(spacing: 12) {
-                Text(subject.name)
+                Text(currentSubj.name)
                     .font(.system(size: 24, weight: .regular))
                     .lineLimit(1)
                     .layoutPriority(1)
-                    .foregroundColor(backend.requiredSubjectIDs.contains(subject.id) ? .red : .primary)
+                    .foregroundColor(backend.requiredSubjectIDs.contains(currentSubj.id) ? .red : .primary)
 
                 ResponsiveSelector(
-                    items: subject.levels.map { $0.name },
+                    items: currentSubj.levels.map { $0.name },
                     selectedIndex: Binding(
-                        get: { backend.selectedLevelIndex(for: dynamicIndex) },
-                        set: { new in
-                            backend.setLevelIndex(new, for: dynamicIndex)
-                        }
+                        get: { backend.selectedLevelIndex(for: index) },
+                        set: { new in backend.setLevelIndex(new, for: index) }
                     )
                 )
                 .frame(maxWidth: .infinity)
-
             }
 
-            let mapForSubject = backend.scoreMapForSubject(subject)
-
+            let mapForSubject = backend.scoreMapForSubject(currentSubj)
             let scoreItems = mapForSubject.map { backend.scoreDisplay == .percentage ? $0.percent : $0.letter }
+            
             ResponsiveSelector(
                 items: scoreItems,
                 selectedIndex: Binding(
-                    get: { backend.selectedScoreIndex(for: dynamicIndex) },
-                    set: { new in
-                        backend.setScoreIndex(new, for: dynamicIndex)
-                    }
+                    get: { backend.selectedScoreIndex(for: index) },
+                    set: { new in backend.setScoreIndex(new, for: index) }
                 )
             )
         }
@@ -172,7 +165,6 @@ struct CustomizeView: View {
 }
 
 // MARK: - ScoreFormatBar
-// has own typechecking scope
 
 private struct ScoreFormatBar: View {
     @EnvironmentObject var backend: Backend
@@ -243,6 +235,7 @@ private struct ScoreFormatPicker: View {
         )
     }
 }
+
 // MARK: - TrackToggleButton
 
 struct TrackToggleButton: View {
@@ -434,6 +427,7 @@ struct Selector: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: UISegmentedControl, context: Context) {
+        context.coordinator.parent = self
         if uiView.numberOfSegments != items.count {
             uiView.removeAllSegments()
             for (i, title) in items.enumerated() {
@@ -451,7 +445,7 @@ struct Selector: UIViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
     class Coordinator: NSObject {
-        let parent: Selector
+        var parent: Selector
         init(_ parent: Selector) { self.parent = parent }
         @objc func changed(_ sc: UISegmentedControl) {
             parent.selectedIndex = sc.selectedSegmentIndex

@@ -45,7 +45,7 @@ public struct CourseModel: Codable {
     public struct Subject: Codable, Identifiable {
         public var id: String
         public var name: String
-        public var weight: Double
+        public var weight: Double?
         public var levels: [Level]
         public var customMap: [ScoreEntry]?
         public var tags: [String]?
@@ -55,24 +55,24 @@ public struct CourseModel: Codable {
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             self.name = try container.decode(String.self, forKey: .name)
-            if let explicitId = try? container.decode(String.self, forKey: .id) {
+            if let explicitId = try container.decodeIfPresent(String.self, forKey: .id) {
                 self.id = explicitId
             } else {
                 self.id = self.name
             }
-            self.weight = try container.decodeIfPresent(Double.self, forKey: .weight) ?? 0.0
+            self.weight = try container.decodeIfPresent(Double.self, forKey: .weight)
             self.levels = try container.decodeIfPresent([Level].self, forKey: .levels) ?? []
-            self.customMap = try? container.decode([ScoreEntry].self, forKey: .customMap)
-            self.tags = try? container.decode([String].self, forKey: .tags)
-            self.scoreMapId = try? container.decode(String.self, forKey: .scoreMapId)
-            self.template = try? container.decode(String.self, forKey: .template)
+            self.customMap = try container.decodeIfPresent([ScoreEntry].self, forKey: .customMap)
+            self.tags = try container.decodeIfPresent([String].self, forKey: .tags)
+            self.scoreMapId = try container.decodeIfPresent(String.self, forKey: .scoreMapId)
+            self.template = try container.decodeIfPresent(String.self, forKey: .template)
         }
 
         public func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(id, forKey: .id)
             try container.encode(name, forKey: .name)
-            try container.encode(weight, forKey: .weight)
+            try container.encodeIfPresent(weight, forKey: .weight)
             try container.encode(levels, forKey: .levels)
             try container.encodeIfPresent(customMap, forKey: .customMap)
             try container.encodeIfPresent(tags, forKey: .tags)

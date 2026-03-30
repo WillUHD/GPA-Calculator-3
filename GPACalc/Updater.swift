@@ -37,8 +37,8 @@ final class Updater {
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.timeoutInterval = 30
 
-        let session = URLSession(configuration: .default)
-        let task = session.dataTask(with: request) { data, response, error in
+        // Fixes Bug 27: Stops URLSession from leaking without invalidation
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 print("Updater: fetch failed: \(error.localizedDescription)")
                 return
@@ -48,11 +48,17 @@ final class Updater {
             do {
                 let filteredRemoteData = self.stripCommentLines(from: data)
                 let newRoot = try JSONDecoder().decode(CourseModel.self, from: filteredRemoteData)
-
-                // Use the passed-in version if available; otherwise fall back to reading from disk/bundle
                 let localVersion: String? = currentVersion ?? self.readLocalVersion()
 
-                if newRoot.version != localVersion {
+                // Fixes Bug 26: Use proper numeric ordering, so v3.2 doesn't trigger downgrade from v3.10
+                let needsUpdate: Bool
+                if let local = localVersion, let remote = newRoot.version {
+                    needsUpdate = (remote.compare(local, options: .numeric) == .orderedDescending)
+                } else {
+                    needsUpdate = true
+                }
+
+                if needsUpdate {
                     if let docDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
                         let fileURL = docDir.appendingPathComponent("Courses.gpa")
                         try data.write(to: fileURL, options: .atomic)
@@ -66,7 +72,7 @@ final class Updater {
                         }
                     }
                 } else {
-                    print("Updater: remote version same as local; no update applied")
+                    print("Updater: remote version same or older; no update applied")
                 }
             } catch {
                 print("Updater: invalid data received: \(error.localizedDescription)")

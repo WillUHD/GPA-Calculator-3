@@ -9,7 +9,7 @@ Completely reworked with online update, rule checking, dynamic score charts, and
 - Online course autoupdate when the catalog changes
 - Selectors adjust to dropdown to fit all screen sizes
 
-<img width="1920" height="1080" alt="GPA Showcase" src="https://github.com/user-attachments/assets/9f368cb6-8bd8-4b9d-8f43-eaed17d84960" />
+<img width="1920" height="1080" alt="GPA Calc Showcase" src="https://github.com/user-attachments/assets/38c85a2e-f196-48d5-abe5-e426442df215" />
 
 Behind the scenes, GPA Calculator uses a custom programming language (comment enabled JSON dialect DSL) to dictate rule-based selections. We value transparency in the project, so GPA Calculator remains open-source. 
 

@@ -4,8 +4,8 @@
 
 Completely reworked with online update, rule checking, dynamic score charts, and an improved UI to fit on all screen sizes.
 
-- Completely rewritten in SwiftUI
-- Reworked rule-based solver for accurate course selection
+- Completely reworked
+- Rule-based solver for accurate course selection
 - Online course autoupdate when the catalog changes
 - Selectors adjust to dropdown to fit all screen sizes
 

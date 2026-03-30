@@ -30,7 +30,7 @@ final class Updater {
     /// Checks for catalog updates from the remote repository.
     /// Accepts the currently loaded version to avoid redundant file I/O and JSON decoding.
     func checkForUpdates(currentVersion: String? = nil) {
-        guard let url = URL(string: "https://edgeone.gh-proxy.org/https://raw.githubusercontent.com/WillUHD/GPAResources/refs/heads/production/Courses.json")
+        guard let url = URL(string: "https://edgeone.gh-proxy.org/https://raw.githubusercontent.com/WillUHD/GPAResources/refs/heads/production/Courses.gpa")
         else { return }
 
         var request = URLRequest(url: url)
@@ -54,7 +54,7 @@ final class Updater {
 
                 if newRoot.version != localVersion {
                     if let docDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-                        let fileURL = docDir.appendingPathComponent("Courses.json")
+                        let fileURL = docDir.appendingPathComponent("Courses.gpa")
                         try data.write(to: fileURL, options: .atomic)
                         print("Updater: downloaded version \(newRoot.version ?? "unknown")")
                         DispatchQueue.main.async {
@@ -69,7 +69,7 @@ final class Updater {
                     print("Updater: remote version same as local; no update applied")
                 }
             } catch {
-                print("Updater: invalid JSON received: \(error.localizedDescription)")
+                print("Updater: invalid data received: \(error.localizedDescription)")
             }
         }
         task.resume()
@@ -78,7 +78,7 @@ final class Updater {
     /// Reads the local catalog version from saved file or bundle (fallback only).
     private func readLocalVersion() -> String? {
         if let docDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-            let savedURL = docDir.appendingPathComponent("Courses.json")
+            let savedURL = docDir.appendingPathComponent("Courses.gpa")
             if let savedData = try? Data(contentsOf: savedURL) {
                 let filtered = stripCommentLines(from: savedData)
                 if let root = try? JSONDecoder().decode(CourseModel.self, from: filtered) {
@@ -86,7 +86,7 @@ final class Updater {
                 }
             }
         }
-        if let bundleURL = Bundle.main.url(forResource: "Courses", withExtension: "json"),
+        if let bundleURL = Bundle.main.url(forResource: "Courses", withExtension: "gpa"),
            let bundleData = try? Data(contentsOf: bundleURL) {
             let filtered = stripCommentLines(from: bundleData)
             if let root = try? JSONDecoder().decode(CourseModel.self, from: filtered) {

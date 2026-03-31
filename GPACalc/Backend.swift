@@ -13,7 +13,7 @@ import Foundation
 import Combine
 import SwiftUI
 
-// MARK: - Safe Collection Extension
+// MARK: - Collection extension
 extension Collection {
     subscript(safe index: Index) -> Element? {
         indices.contains(index) ? self[index] : nil
@@ -100,6 +100,7 @@ final class Backend: ObservableObject {
                 selectedScoreIndicesBySubject[key] = max(0, map.count - 1)
             }
         }
+        
         persistSelections()
         recomputeGPA()
     }
@@ -135,7 +136,8 @@ final class Backend: ObservableObject {
         let prevId = currentPreset?.id
         var root = newRoot
 
-        let tpls = Dictionary(uniqueKeysWithValues: (root.templates ?? []).map { ($0.id, $0) })
+        // unique IDless names
+        let tpls = Dictionary((root.templates ?? []).map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         for (pIdx, p) in (root.presets ?? []).enumerated() {
             for (mIdx, m) in p.modules.enumerated() {
                 for (sIdx, var s) in m.subjects.enumerated() {
@@ -263,9 +265,14 @@ final class Backend: ObservableObject {
     }
 
     func toggleSelection(modIndex: Int, itemIndex: Int) {
-        guard let p = currentPreset, let module = p.modules[safe: modIndex], publishedEffectiveLimit(for: modIndex) > 0 else { return }
+        guard let p = currentPreset,
+              let module = p.modules[safe: modIndex],
+              let subj = module.subjects[safe: itemIndex], // safe check
+              publishedEffectiveLimit(for: modIndex) > 0 else { return }
+        
         var entries = selectionsByModule[modIndex] ?? []
-
+        let sKey = subjectKey(for: subj)
+        
         if let existing = entries.firstIndex(where: { $0.itemIndex == itemIndex }) {
             entries.remove(at: existing)
         } else {
@@ -288,7 +295,8 @@ final class Backend: ObservableObject {
             entries.append(SelectionEntry(itemIndex: itemIndex, subjectId: sKey))
             selectionsByModule[modIndex] = entries
             
-            let dryLimit = evaluateRulesInternal().effectiveLimits[modIndex] ?? (module.limit ?? 1)
+            // limit defaults to a good floor
+            let dryLimit = max(0, evaluateRulesInternal().effectiveLimits[modIndex] ?? (module.limit ?? 1))
             if entries.count > dryLimit { entries.removeFirst(entries.count - dryLimit) }
         }
         
@@ -321,7 +329,13 @@ final class Backend: ObservableObject {
 
             for (mod, limit) in state.effectiveLimits {
                 if let entries = selectionsByModule[mod], entries.count > limit {
-                    selectionsByModule[mod] = limit == 0 ? [] : Array(entries.prefix(limit))
+                    
+                    // prevent crashes on negative module limits
+                    let safeLimit = max(0, limit)
+                    if entries.count > safeLimit {
+                        selectionsByModule[mod] = Array(entries.prefix(safeLimit))
+                        needsRebuild = true
+                    }
                     needsRebuild = true
                 }
             }
@@ -412,8 +426,7 @@ final class Backend: ObservableObject {
                     d.insert(sIdx); continue
                 }
                 
-                // Matches original behavior exactly: Do NOT forcefully lock rows out based on level tags.
-                // Leave them unlocked to freely allow toggle-swapping.
+                // toggle swapping
                 if let tags = subj.tags {
                     if !Set(tags).isDisjoint(with: excludedTags) || !Set(tags).isDisjoint(with: cappedTags) {
                         d.insert(sIdx)
@@ -511,6 +524,7 @@ final class Backend: ObservableObject {
         }
     }
 
+    // GPA algorithm: (weight_i / ∑weights) * (gpa - offset)
     private func recomputeGPA() {
         assert(Thread.isMainThread, "recomputeGPA must be called on main")
         guard currentPreset != nil else { calculationResultText = "whoops"; return }
@@ -530,9 +544,11 @@ final class Backend: ObservableObject {
     func resetAllLevelsAndScores() {
         selectedLevelIndicesBySubject.removeAll()
         selectedScoreIndicesBySubject.removeAll()
+        selectedScoreMapIdBySubject.removeAll()
         ensureDefaultIndices(for: activeSubjects, in: &selectedLevelIndicesBySubject)
         ensureDefaultIndices(for: activeSubjects, in: &selectedScoreIndicesBySubject)
         persistSelections()
+        rebuildActiveSubjects()
         validateRulesAndRecompute()
     }
 

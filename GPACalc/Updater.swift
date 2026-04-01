@@ -30,7 +30,7 @@ final class Updater {
     /// Checks for catalog updates from the remote repository.
     /// Accepts the currently loaded version to avoid redundant file I/O and JSON decoding.
     func checkForUpdates(currentVersion: String? = nil) {
-        guard let url = URL(string: "https://edgeone.gh-proxy.org/https://raw.githubusercontent.com/WillUHD/GPAResources/refs/heads/production/Courses.gpa")
+        guard let url = URL(string: "https://edgeone.gh-proxy.org/https://raw.githubusercontent.com/WillUHD/GPAResources/refs/heads/main/Courses.gpa")
         else { return }
 
         var request = URLRequest(url: url)

@@ -24,58 +24,58 @@ struct ContentView: View {
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 12) {
-                Text("GPA Calculator")
-                    .font(.system(size: 32, weight: .semibold))
-                    .padding(.top, 20)
-
-                Text(backend.calculationResultText)
-                    .font(.system(size: 18))
-                    .foregroundColor(backend.isInvalidated ? .red : .secondary)
-
-                HStack(spacing: 16) {
-                    Button(action: {
-                        Haptic.medium()
-                        showingCustomize = true
-                    }) {
-                        Text("Customize")
-                            .font(.system(size: 18, weight: .medium))
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 36)
+            ZStack {
+                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
+                VStack(spacing: 16) {
+                    VStack(spacing: 8) {
+                        Text("GPA Calculator")
+                            .font(.system(size: 32, weight: .semibold))
+                            .padding(.top, 20)
+                        Text(backend.calculationResultText)
+                            .font(.system(size: 18))
+                            .foregroundColor(backend.isInvalidated ? .red : .secondary)
                     }
-                    .background(Color("btnColor"))
-                    .foregroundColor(.primary)
-                    .cornerRadius(8)
 
-                    Button(action: {
-                        Haptic.medium()
-                        backend.resetAllLevelsAndScores()
-                    }) {
-                        Text("Reset")
-                            .font(.system(size: 18, weight: .medium))
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 36)
-                    }
-                    .background(Color("btnColor"))
-                    .foregroundColor(.primary)
-                    .cornerRadius(8)
-                }.padding(.horizontal, 16)
-
-                ScrollView {
-                    VStack(spacing: 12) {
-                        ForEach(Array(backend.activeSubjects.enumerated()), id: \.element.stableId) { idx, subject in
-                            SubjectRowView(subject: subject, index: idx, backend: backend)
-                                .padding(.horizontal, 16)
+                    HStack(spacing: 16) {
+                        Button(action: { Haptic.medium(); showingCustomize = true }) {
+                            Text("Customize")
+                                .font(.system(size: 18, weight: .medium))
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 44)
                         }
+                        .background(Color(UIColor.secondarySystemGroupedBackground))
+                        .foregroundColor(.primary)
+                        .cornerRadius(10)
+
+                        Button(action: {
+                            Haptic.medium()
+                            backend.resetAllLevelsAndScores()
+                        }) {
+                            Text("Reset")
+                                .font(.system(size: 18, weight: .medium))
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 44)
+                        }
+                        .background(Color(UIColor.secondarySystemGroupedBackground))
+                        .foregroundColor(.primary)
+                        .cornerRadius(10)
+                    }.padding(.horizontal, 16)
+
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            ForEach(Array(backend.activeSubjects.enumerated()), id: \.1.stableId) { idx, subject in
+                                SubjectRowView(subject: subject, index: idx, backend: backend)
+                                    .padding(.horizontal, 16)
+                            }
+                        }
+                        .padding(.top, 0)
+                        .padding(.bottom, 40)
                     }
-                    .padding(.top, 8)
-                    .padding(.bottom, 40)
-                }.background(Color("presetFloat"))
+                }
             }
             .navigationTitle("")
-            .sheet(isPresented: $showingCustomize) {
-                CustomizeView().environmentObject(backend)
-            }.onAppear { backend.loadInitialData() }
+            .sheet(isPresented: $showingCustomize) { CustomizeView().environmentObject(backend) }
+            .onAppear { backend.loadInitialData() }
         }.navigationViewStyle(StackNavigationViewStyle())
     }
 }
@@ -92,43 +92,27 @@ struct SubjectRowView: View {
     var body: some View {
         let currentSubj = liveSubject
         
-        VStack(spacing: 8) {
+        VStack(spacing: 16) {
             HStack(spacing: 12) {
-                Text(currentSubj.name)
-                    .font(.system(size: 24, weight: .regular))
-                    .lineLimit(1)
-                    .layoutPriority(1)
+                Text(currentSubj.name).font(.system(size: 24, weight: .regular)).lineLimit(1).layoutPriority(1)
                     .foregroundColor(backend.requiredSubjectIDs.contains(currentSubj.id) ? .red : .primary)
 
+                // Animations remain disabled here as requested (Selector uses UIView.performWithoutAnimation)
                 ResponsiveSelector(
                     items: currentSubj.levels.map { $0.name },
-                    selectedIndex: Binding(
-                        get: { backend.selectedLevelIndex(for: index) },
-                        set: { new in backend.setLevelIndex(new, for: index) }
-                    )
-                )
-                .frame(maxWidth: .infinity)
+                    selectedIndex: Binding(get: { backend.selectedLevelIndex(for: index) }, set: { backend.setLevelIndex($0, for: index) })
+                ).frame(maxWidth: .infinity)
             }
 
-            let mapForSubject = backend.scoreMapForSubject(currentSubj)
-            let scoreItems = mapForSubject.map { backend.scoreDisplay == .percentage ? $0.percent : $0.letter }
-            
             ResponsiveSelector(
-                items: scoreItems,
-                selectedIndex: Binding(
-                    get: { backend.selectedScoreIndex(for: index) },
-                    set: { new in backend.setScoreIndex(new, for: index) }
-                )
+                items: backend.scoreMapForSubject(currentSubj).map { backend.scoreDisplay == .percentage ? $0.percent : $0.letter },
+                selectedIndex: Binding(get: { backend.selectedScoreIndex(for: index) }, set: { backend.setScoreIndex($0, for: index) })
             )
         }
-        .padding()
-        .background(Color("backgroundColor"))
-        .cornerRadius(10)
-        .opacity(0.95)
+        .padding(.vertical, 20).padding(.horizontal, 16)
+        .background(Color(UIColor.secondarySystemGroupedBackground)).cornerRadius(12)
     }
 }
-
-// MARK: - CustomizeView
 
 struct CustomizeView: View {
     @EnvironmentObject var backend: Backend
@@ -136,282 +120,210 @@ struct CustomizeView: View {
 
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 12) {
-                    ScoreFormatBar()
-                    if let warn = backend.requirementWarning {
-                        Text(warn)
-                            .foregroundColor(.red)
-                            .padding(.horizontal)
-                    }
+            ZStack {
+                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: 24) {
+                        scoreFormatBar
+                        
+                        if let warn = backend.requirementWarning {
+                            Text(warn).foregroundColor(.red).padding(.horizontal)
+                        }
 
-                    PresetGrid()
-                    ChoiceModulesSection()
-                    CatalogFooter()
-                }.padding(.vertical, 12)
+                        presetGrid
+                        
+                        VStack(spacing: 16) {
+                            ForEach(backend.choiceModules, id: \.modIndex) { mod in
+                                ModuleSelector(module: mod.module, modIndex: mod.modIndex, backend: backend).padding(.horizontal)
+                            }
+                        }
+                        
+                        Text("\(backend.root?.catalogName ?? "Unspecified catalog")\nVersion \(backend.root?.version ?? "??"), last updated \(backend.root?.lastUpdated ?? "idk")\n\(backend.root?.credit ?? "Original project by Michel")")
+                            .font(.system(size: 12, weight: .semibold)).foregroundColor(.secondary).multilineTextAlignment(.center).padding(.top, 8).padding(.horizontal)
+                    }.padding(.vertical, 20)
+                }
             }
-            .navigationTitle("Customize")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Customize").navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Close") {
-                        Haptic.medium()
-                        presentationMode.wrappedValue.dismiss()
-                    }
+                    Button("Close") { Haptic.medium(); presentationMode.wrappedValue.dismiss() }
                 }
             }
         }.navigationViewStyle(StackNavigationViewStyle())
     }
-}
 
-// MARK: - ScoreFormatBar
-
-private struct ScoreFormatBar: View {
-    @EnvironmentObject var backend: Backend
-
-    var body: some View {
+    private var scoreFormatBar: some View {
         HStack(spacing: 12) {
-            Text("Score Format")
-                .font(.system(size: 16, weight: .semibold))
-                .layoutPriority(1)
+            Text("Score Format").font(.system(size: 16, weight: .semibold)).layoutPriority(1)
             
-            TrackToggleSlot(
-                track: backend.currentPreset?.track,
-                isActive: backend.trackActive,
-                onToggle: {
+            if let track = backend.currentPreset?.track {
+                Button("Use \(track.displayName)") {
                     Haptic.medium()
-                    var transaction = Transaction()
-                    transaction.animation = nil
-                    withTransaction(transaction) {
-                        backend.setTrackActive(!backend.trackActive)
-                    }
+                    var t = Transaction(); t.animation = nil
+                    withTransaction(t) { backend.setTrackActive(!backend.trackActive) }
                 }
-            )
-            .layoutPriority(1)
+                .font(.system(size: 13, weight: .medium)).padding(.horizontal, 10).frame(height: 30)
+                .background(RoundedRectangle(cornerRadius: 6).fill(backend.trackActive ? Color.blue : Color(UIColor.systemGray4)))
+                .foregroundColor(backend.trackActive ? .white : .secondary)
+                .layoutPriority(1)
+            }
 
-            ScoreFormatPicker()
-                .frame(maxWidth: .infinity)
+            ResponsiveSelector(
+                items: ["Percentage", "Letter"],
+                selectedIndex: Binding(get: { backend.scoreDisplay.rawValue }, set: { if let n = ScoreDisplay(rawValue: $0) { backend.scoreDisplay = n } })
+            ).frame(maxWidth: .infinity)
         }
-        .padding(.horizontal)
-        .padding(.top, 0)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 16).padding(.vertical, 12).background(Color(UIColor.secondarySystemGroupedBackground)).cornerRadius(10).padding(.horizontal, 16)
     }
-}
 
-// MARK: - TrackToggleSlot
+    private var presetGrid: some View {
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 13), GridItem(.flexible(), spacing: 13)], spacing: 13) {
+            ForEach(backend.root?.presets ?? [], id: \.id) { p in
+                let isSelected = (backend.currentPreset?.id == p.id)
 
-private struct TrackToggleSlot: View {
-    let track: CourseModel.PresetTrack?
-    let isActive: Bool
-    let onToggle: () -> Void
-
-    var body: some View {
-        if let track {
-            TrackToggleButton(
-                label: "Use \(track.displayName)",
-                isActive: isActive,
-                action: onToggle
-            )
-        }
-    }
-}
-
-// MARK: - ScoreFormatPicker
-
-private struct ScoreFormatPicker: View {
-    @EnvironmentObject var backend: Backend
-
-    var body: some View {
-        ResponsiveSelector(
-            items: ["Percentage", "Letter"],
-            selectedIndex: Binding(
-                get: { backend.scoreDisplay.rawValue },
-                set: { new in
-                    if let newDisplay = ScoreDisplay(rawValue: new) {
-                        backend.scoreDisplay = newDisplay
-                    }
-                }
-            )
-        )
-    }
-}
-
-// MARK: - TrackToggleButton
-
-struct TrackToggleButton: View {
-    let label: String
-    let isActive: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(label)
-                .font(.system(size: 13, weight: .medium))
-                .padding(.horizontal, 10)
-                .frame(height: 30)
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(isActive ? Color.blue : Color(UIColor.systemGray5))
-                )
-                .foregroundColor(isActive ? .white : .secondary)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-// MARK: - PresetGrid
-
-private struct PresetGrid: View {
-    @EnvironmentObject var backend: Backend
-
-    var body: some View {
-        VStack(spacing: 12) {
-            let presets = backend.root?.presets ?? []
-            let columns = [
-                GridItem(.flexible(), spacing: 13),
-                GridItem(.flexible(), spacing: 13)
-            ]
-
-            LazyVGrid(columns: columns, spacing: 13) {
-                ForEach(presets, id: \.id) { p in
-                    let isSelected = (backend.currentPreset?.id == p.id)
-
-                    Button(action: {
-                        Haptic.medium()
-                        withTransaction(Transaction(animation: nil)) {
-                            backend.selectPreset(p.id)
-                    }}) {
-                        HStack(spacing: 12) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(p.name)
-                                    .font(.system(size: 24, weight: .semibold))
-                                    .foregroundColor(isSelected ? .primary : .blue)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                                Text(p.subtitle ?? "\(p.modules.reduce(0) { $0 + $1.subjects.count }) items")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(Color("subttl"))
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-
-                            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                                .font(.system(size: 20))
-                                .foregroundColor(isSelected ? .primary : .gray)
+                Button(action: {
+                    Haptic.medium()
+                    var t = Transaction(); t.animation = nil
+                    withTransaction(t) { backend.selectPreset(p.id) }
+                }) {
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(p.name).font(.system(size: 20, weight: .semibold)).foregroundColor(isSelected ? .white : .blue).frame(maxWidth: .infinity, alignment: .leading)
+                            Text(p.subtitle ?? "\(p.modules.reduce(0) { $0 + $1.subjects.count }) items")
+                                .font(.system(size: 13)).foregroundColor(isSelected ? .white.opacity(0.8) : .secondary).frame(maxWidth: .infinity, alignment: .leading)
                         }
-                        .padding()
-                        .frame(height: 70)
-                        .frame(maxWidth: .infinity)
-                        .background(isSelected ? Color("btnColor") : Color("presetFloat"))
-                        .cornerRadius(8)
-                    }.buttonStyle(.plain)
-                }
-            }.padding(.horizontal, 16)
-        }
+                        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle").font(.system(size: 18)).foregroundColor(isSelected ? .white : .gray)
+                    }
+                    .padding().frame(height: 80).frame(maxWidth: .infinity)
+                    .background(isSelected ? Color.blue : Color(UIColor.secondarySystemGroupedBackground)).cornerRadius(12)
+                }.buttonStyle(.plain)
+            }
+        }.padding(.horizontal, 16)
     }
 }
 
-// MARK: - ChoiceModulesSection
-
-private struct ChoiceModulesSection: View {
-    @EnvironmentObject var backend: Backend
+struct ModuleSelector: View {
+    let module: CourseModel.Module
+    let modIndex: Int
+    @ObservedObject var backend: Backend
+    @State private var expanded = false
 
     var body: some View {
-        VStack(spacing: 12) {
-            ForEach(backend.choiceModules, id: \.modIndex) { mod in
-                ModuleSelector(
-                    module: mod.module,
-                    modIndex: mod.modIndex,
-                    backend: backend
-                ).padding(.horizontal)
+        let isLocked = backend.publishedEffectiveLimit(for: modIndex) == 0
+        VStack(spacing: 0) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(module.name ?? "Module").font(.system(size: 18, weight: .bold))
+                        .foregroundColor(backend.modulesRequiringSelection.contains(modIndex) ? .red : (isLocked ? .gray : .primary))
+                    Text(backend.moduleStatusText(modIndex: modIndex)).font(.system(size: 14)).foregroundColor(backend.moduleStatusColor(modIndex: modIndex))
+                }
+                Spacer()
+                Image(systemName: expanded ? "chevron.down" : "chevron.right").foregroundColor(.gray)
+            }
+            .padding(.vertical, 18).padding(.horizontal, 16).background(Color(UIColor.secondarySystemGroupedBackground)).contentShape(Rectangle())
+            .onTapGesture {
+                if isLocked { Haptic.error() } else { Haptic.light(); withAnimation { expanded.toggle() } }
+            }
+
+            if expanded {
+                VStack(spacing: 0) {
+                    Divider()
+                    ForEach(Array(module.subjects.enumerated()), id: \.1.stableId) { idx, subj in
+                        let disabled = backend.isDisabled(modIndex: modIndex, itemIndex: idx)
+                        let isSelected = backend.isSelected(modIndex: modIndex, itemIndex: idx)
+                        
+                        Button(action: { Haptic.medium(); backend.toggleSelection(modIndex: modIndex, itemIndex: idx) }) {
+                            HStack {
+                                Text(subj.name).font(.system(size: 16))
+                                    .foregroundColor(backend.requiredSubjectIDs.contains(subj.id) ? .red : (disabled ? .gray : .primary))
+                                Spacer()
+                                Image(systemName: isSelected ? "checkmark.circle.fill" : (disabled ? "lock.fill" : "circle"))
+                                    .foregroundColor(isSelected ? .blue : .gray)
+                            }
+                            .padding(.vertical, 14).padding(.horizontal, 16)
+                        }
+                        .disabled(disabled || isLocked).opacity((disabled || isLocked) ? 0.5 : 1.0)
+                        
+                        if idx < module.subjects.count - 1 { Divider().padding(.leading, 16) }
+                    }
+                }.background(Color(UIColor.secondarySystemGroupedBackground))
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 12)).opacity(isLocked ? 0.6 : 1.0)
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ModuleShouldCollapse"))) { note in
+            if let info = note.userInfo, let idx = info["moduleIndex"] as? Int, idx == modIndex {
+                withAnimation { expanded = false }
             }
         }
     }
 }
-
-// MARK: - CatalogFooter
-
-private struct CatalogFooter: View {
-    @EnvironmentObject var backend: Backend
-
-    var body: some View {
-        VStack {
-            let catalog = backend.root?.catalogName ?? "Unspecified catalog"
-            let version = backend.root?.version ?? "??"
-            let lastUpdated = backend.root?.lastUpdated ?? "idk"
-            let credit = backend.root?.credit ?? "Original project by Michel"
-
-            Text("\(catalog)\nVersion \(version), last updated \(lastUpdated)\n\(credit)")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .lineLimit(nil)
-                .padding(.top, 8)
-                .padding(.horizontal)
-        }
-    }
-}
-
-// MARK: - ResponsiveSelector
 
 struct ResponsiveSelector: View {
     let items: [String]
     @Binding var selectedIndex: Int
 
-    private static let labelFont = UIFont.systemFont(ofSize: 14, weight: .regular)
-    private let paddingPerSegment: CGFloat = 24
-    private let extraTotalPadding: CGFloat = 12
+    private let fontSize: CGFloat = 13
+    private let itemHorizontalPadding: CGFloat = 12
+    private let interItemSpacing: CGFloat = 4
+    private let containerOuterMargin: CGFloat = 8
+    private let componentHeight: CGFloat = 32
+    private let evenModePadding: CGFloat = 24
 
     var body: some View {
         GeometryReader { geo in
-            let available = max(0, geo.size.width)
-
-            let textWidths = items.map { $0.width(usingFont: Self.labelFont) }
-            let maxTextWidth = textWidths.max() ?? 0
+            let availableWidth = geo.size.width
+            let textWidths = items.map { $0.width(usingFont: .systemFont(ofSize: fontSize, weight: .medium)) }
             let totalTextWidth = textWidths.reduce(0, +)
+            let totalPadding = CGFloat(items.count) * itemHorizontalPadding
+            let totalSpacing = CGFloat(max(0, items.count - 1)) * interItemSpacing
+            let minRequiredWidth = totalTextWidth + totalPadding + totalSpacing + containerOuterMargin
+            let maxTextWidth = textWidths.max() ?? 0
+            let evenWidth = (maxTextWidth + evenModePadding) * CGFloat(items.count) + containerOuterMargin
 
-            let compactWidth = totalTextWidth + (CGFloat(items.count) * paddingPerSegment) + extraTotalPadding
-            let evenWidth = (maxTextWidth + paddingPerSegment) * CGFloat(items.count) + extraTotalPadding
-
-            if items.isEmpty {
-                EmptyView()
-            } else if available < compactWidth && items.count > 1 {
-                Menu {
-                    ForEach(0..<items.count, id: \.self) { i in
-                        Button(items[i]) {
-                            Haptic.light()
-                            selectedIndex = i
-                        }
-                    }
-                } label: {
-                    HStack {
-                        Text(items[safe: selectedIndex] ?? items[0])
-                            .font(.system(size: 14))
-                            .foregroundColor(.primary)
-                            .lineLimit(1)
-                        Spacer()
-                        Image(systemName: "chevron.down")
-                            .foregroundColor(.gray)
-                    }
-                    .padding(.horizontal, 12)
-                    .frame(height: 36)
-                    .background(Color(UIColor.secondarySystemBackground))
-                    .cornerRadius(8)
+            Group {
+                if items.isEmpty {
+                    EmptyView()
+                } else if availableWidth < minRequiredWidth && items.count > 1 {
+                    dropdownMenu
+                } else {
+                    Selector(
+                        items: items,
+                        selectedIndex: $selectedIndex,
+                        evenlySpaced: availableWidth >= evenWidth
+                    )
+                    .frame(width: availableWidth, height: componentHeight)
                 }
-            } else {
-                let isEven = available >= evenWidth
-                Selector(
-                    items: items,
-                    selectedIndex: $selectedIndex,
-                    evenlySpaced: isEven
-                )
-                .frame(width: available, height: 36)
             }
         }
-        .frame(minHeight: 36)
+        .frame(height: componentHeight)
+    }
+
+    private var dropdownMenu: some View {
+        Menu {
+            ForEach(0..<items.count, id: \.self) { i in
+                Button(items[i]) {
+                    Haptic.light()
+                    selectedIndex = i
+                }
+            }
+        } label: {
+            HStack {
+                Text(items[safe: selectedIndex] ?? items.first ?? "")
+                    .font(.system(size: fontSize, weight: .medium))
+                    .foregroundColor(.primary)
+                Spacer()
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 10)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(UIColor.systemGray5))
+            .cornerRadius(6)
+        }
     }
 }
-
-// MARK: - Selector
 
 struct Selector: UIViewRepresentable {
     let items: [String]
@@ -420,25 +332,26 @@ struct Selector: UIViewRepresentable {
 
     func makeUIView(context: Context) -> UISegmentedControl {
         let sc = UISegmentedControl(items: items)
-        sc.selectedSegmentIndex = selectedIndex
-        sc.addTarget(context.coordinator, action: #selector(Coordinator.changed(_:)), for: .valueChanged)
-        sc.translatesAutoresizingMaskIntoConstraints = false
+        sc.addTarget(context.coordinator, action: #selector(Coordinator.changed), for: .valueChanged)
         return sc
     }
 
     func updateUIView(_ uiView: UISegmentedControl, context: Context) {
         context.coordinator.parent = self
-        if uiView.numberOfSegments != items.count {
-            uiView.removeAllSegments()
-            for (i, title) in items.enumerated() {
-                uiView.insertSegment(withTitle: title, at: i, animated: false)
+        UIView.performWithoutAnimation {
+            if uiView.numberOfSegments != items.count {
+                uiView.removeAllSegments()
+                for (i, title) in items.enumerated() {
+                    uiView.insertSegment(withTitle: title, at: i, animated: false)
+                }
+            } else {
+                for (i, title) in items.enumerated() {
+                    uiView.setTitle(title, forSegmentAt: i)
+                }
             }
-        } else {
-            for (i, title) in items.enumerated() {
-                uiView.setTitle(title, forSegmentAt: i)
-            }
+            uiView.selectedSegmentIndex = selectedIndex
+            uiView.layoutIfNeeded()
         }
-        uiView.selectedSegmentIndex = selectedIndex
         uiView.apportionsSegmentWidthsByContent = !evenlySpaced
     }
 
@@ -447,124 +360,24 @@ struct Selector: UIViewRepresentable {
     class Coordinator: NSObject {
         var parent: Selector
         init(_ parent: Selector) { self.parent = parent }
-        @objc func changed(_ sc: UISegmentedControl) {
-            parent.selectedIndex = sc.selectedSegmentIndex
-            Haptic.light()
-        }
+        @objc func changed(_ sc: UISegmentedControl) { parent.selectedIndex = sc.selectedSegmentIndex; Haptic.light() }
     }
 }
 
-// MARK: - ModuleSelector
-
-struct ModuleSelector: View {
-    let module: CourseModel.Module
-    let modIndex: Int
-    @ObservedObject var backend: Backend
-
-    @State private var expanded = false
-    @State private var collapseObserver: AnyCancellable?
-
-    var body: some View {
-        let isLocked = backend.publishedEffectiveLimit(for: modIndex) == 0
-        VStack(spacing: 0) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(module.name ?? "Module")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(
-                            backend.modulesRequiringSelection.contains(modIndex)
-                            ? .red
-                            : (isLocked ? .gray : .primary)
-                        )
-                    Text(backend.moduleStatusText(modIndex: modIndex))
-                        .font(.system(size: 14))
-                        .foregroundColor(backend.moduleStatusColor(modIndex: modIndex))
-                }
-                Spacer()
-                Image(systemName: expanded ? "chevron.down" : "chevron.right").foregroundColor(.gray)
-            }
-            .padding()
-            .background(Color("presetFloat"))
-            .cornerRadius(8)
-            .opacity(isLocked ? 0.6 : 1.0)
-            .onTapGesture {
-                if isLocked {
-                    Haptic.error()
-                    return
-                }
-                Haptic.light()
-                withAnimation { expanded.toggle() }
-            }
-
-            if expanded {
-                VStack(spacing: 0) {
-                    ForEach(Array(module.subjects.enumerated()), id: \.1.stableId) { idx, subj in
-                        let disabled = backend.isDisabled(modIndex: modIndex, itemIndex: idx)
-                        Button(action: {
-                            Haptic.medium()
-                            backend.toggleSelection(modIndex: modIndex, itemIndex: idx)
-                        }) {
-                            HStack {
-                                Text(subj.name)
-                                    .foregroundColor(
-                                        backend.requiredSubjectIDs.contains(subj.id)
-                                        ? .red
-                                        : (disabled ? .gray : .primary)
-                                    )
-                                Spacer()
-                                if backend.isSelected(modIndex: modIndex, itemIndex: idx) {
-                                    Image(systemName: "checkmark.circle.fill").foregroundColor(.blue)
-                                } else if disabled {
-                                    Image(systemName: "lock.fill").foregroundColor(.gray)
-                                } else {
-                                    Image(systemName: "circle").foregroundColor(.gray)
-                                }
-                            }.padding()
-                        }
-                        .disabled(disabled || isLocked)
-                        .opacity((disabled || isLocked) ? 0.5 : 1.0)
-                        Divider().padding(.leading, 15)
-                    }
-                }
-                .background(Color(UIColor.systemBackground))
-                .cornerRadius(8)
-            }
-        }.onAppear {
-            collapseObserver = NotificationCenter.default.publisher(for: Notification.Name("ModuleShouldCollapse"))
-                .receive(on: RunLoop.main)
-                .sink { note in
-                    if let info = note.userInfo, let idx = info["moduleIndex"] as? Int, idx == modIndex {
-                        withAnimation { expanded = false }
-                    }
-                }
-        }.onDisappear {
-            collapseObserver?.cancel()
-            collapseObserver = nil
-        }
-    }
-}
-
-// MARK: - Haptics
-
+// MARK: - Helpers
 enum Haptic {
     static func medium() { UIImpactFeedbackGenerator(style: .medium).impactOccurred() }
     static func light() { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
     static func error() { UINotificationFeedbackGenerator().notificationOccurred(.error) }
 }
 
-// MARK: - Helpers
-
 private extension String {
     func width(usingFont font: UIFont) -> CGFloat {
-        let attributes = [NSAttributedString.Key.font: font]
-        let size = (self as NSString).size(withAttributes: attributes)
-        return ceil(size.width)
+        ceil((self as NSString).size(withAttributes: [.font: font]).width)
     }
 }
-
 private extension Array {
     subscript(safe index: Int) -> Element? {
-        guard indices.contains(index) else { return nil }
-        return self[index]
+        indices.contains(index) ? self[index] : nil
     }
 }

@@ -40,7 +40,6 @@ private struct RuleState {
 final class Backend: ObservableObject {
     static let shared = Backend()
 
-    // MARK: Published states
     @Published private(set) var root: CourseModel?
     @Published var currentPreset: CourseModel.Preset?
     @Published var activeSubjects: [CourseModel.Subject] = []
@@ -55,7 +54,6 @@ final class Backend: ObservableObject {
     @Published var trackActive: Bool = true
     @Published var scoreDisplay: ScoreDisplay = .percentage { didSet { persistSelections() } }
 
-    // MARK: Private states
     private var defaultScoreMapId: String = "default"
     private var selectedScoreMapIdBySubject: [String: String] = [:]
     private var selectedLevelIndicesBySubject: [String: Int] = [:]
@@ -64,7 +62,6 @@ final class Backend: ObservableObject {
     private var trackToggleByPreset: [String: Bool] = [:]
     private var hasLoadedInitialData = false
 
-    // MARK: init
     private init() {
         NotificationCenter.default.addObserver(self, selector: #selector(handleExternalUpdate(_:)), name: Notification.Name("CoursesUpdated"), object: nil)
     }
@@ -112,7 +109,7 @@ final class Backend: ObservableObject {
         
         let fm = FileManager.default
         let docDir = fm.urls(for: .documentDirectory, in: .userDomainMask).first
-        let savedURL = docDir?.appendingPathComponent("Courses.gpa")
+        let savedURL = docDir?.appendingPathComponent(Updater.fileName + "." + Updater.fileExt)
         
         func tryLoad(from url: URL?) -> Bool {
             guard let url = url, let data = try? Data(contentsOf: url) else { return false }
@@ -125,7 +122,7 @@ final class Backend: ObservableObject {
 
         if tryLoad(from: savedURL) { return }
         if savedURL != nil { try? fm.removeItem(at: savedURL!) }
-        if tryLoad(from: Bundle.main.url(forResource: "Courses", withExtension: "gpa")) { return }
+        if tryLoad(from: Bundle.main.url(forResource: Updater.fileName, withExtension: Updater.fileExt)) { return }
 
         root = nil
         calculationResultText = "No catalog available"
@@ -271,7 +268,7 @@ final class Backend: ObservableObject {
               publishedEffectiveLimit(for: modIndex) > 0 else { return }
         
         var entries = selectionsByModule[modIndex] ?? []
-        let sKey = subjectKey(for: subj)
+        _ = subjectKey(for: subj)
         
         if let existing = entries.firstIndex(where: { $0.itemIndex == itemIndex }) {
             entries.remove(at: existing)

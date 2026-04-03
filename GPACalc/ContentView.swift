@@ -37,28 +37,33 @@ struct ContentView: View {
                     }
 
                     HStack(spacing: 16) {
-                        Button(action: { Haptic.medium(); showingCustomize = true }) {
+                        Button(action: {
+                            Haptic.medium()
+                            showingCustomize = true
+                        }) {
                             Text("Customize")
                                 .font(.system(size: 18, weight: .medium))
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 44)
+                                .background(Color(UIColor.secondarySystemGroupedBackground))
+                                .foregroundColor(.primary)
+                                .cornerRadius(10)
                         }
-                        .background(Color(UIColor.secondarySystemGroupedBackground))
-                        .foregroundColor(.primary)
-                        .cornerRadius(10)
 
                         Button(action: {
                             Haptic.medium()
-                            backend.resetAllLevelsAndScores()
+                            withAnimation {
+                                backend.resetAllLevelsAndScores()
+                            }
                         }) {
                             Text("Reset")
                                 .font(.system(size: 18, weight: .medium))
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 44)
+                                .background(Color(UIColor.secondarySystemGroupedBackground))
+                                .foregroundColor(.primary)
+                                .cornerRadius(10)
                         }
-                        .background(Color(UIColor.secondarySystemGroupedBackground))
-                        .foregroundColor(.primary)
-                        .cornerRadius(10)
                     }.padding(.horizontal, 16)
 
                     ScrollView {
@@ -97,16 +102,21 @@ struct SubjectRowView: View {
                 Text(currentSubj.name).font(.system(size: 24, weight: .regular)).lineLimit(1).layoutPriority(1)
                     .foregroundColor(backend.requiredSubjectIDs.contains(currentSubj.id) ? .red : .primary)
 
-                // Animations remain disabled here as requested (Selector uses UIView.performWithoutAnimation)
                 ResponsiveSelector(
                     items: currentSubj.levels.map { $0.name },
-                    selectedIndex: Binding(get: { backend.selectedLevelIndex(for: index) }, set: { backend.setLevelIndex($0, for: index) })
+                    selectedIndex: Binding(
+                        get: { backend.activeSubjects.indices.contains(index) ? backend.selectedLevelIndex(for: index) : 0 },
+                        set: { if backend.activeSubjects.indices.contains(index) { backend.setLevelIndex($0, for: index) } }
+                    )
                 ).frame(maxWidth: .infinity)
             }
 
             ResponsiveSelector(
                 items: backend.scoreMapForSubject(currentSubj).map { backend.scoreDisplay == .percentage ? $0.percent : $0.letter },
-                selectedIndex: Binding(get: { backend.selectedScoreIndex(for: index) }, set: { backend.setScoreIndex($0, for: index) })
+                selectedIndex: Binding(
+                    get: { backend.activeSubjects.indices.contains(index) ? backend.selectedScoreIndex(for: index) : 0 },
+                    set: { if backend.activeSubjects.indices.contains(index) { backend.setScoreIndex($0, for: index) } }
+                )
             )
         }
         .padding(.vertical, 20).padding(.horizontal, 16)
@@ -160,8 +170,8 @@ struct CustomizeView: View {
             if let track = backend.currentPreset?.track {
                 Button("Use \(track.displayName)") {
                     Haptic.medium()
-                    var t = Transaction(); t.animation = nil
-                    withTransaction(t) { backend.setTrackActive(!backend.trackActive) }
+                    // Removed transaction animation disabling
+                    backend.setTrackActive(!backend.trackActive)
                 }
                 .font(.system(size: 13, weight: .medium)).padding(.horizontal, 10).frame(height: 30)
                 .background(RoundedRectangle(cornerRadius: 6).fill(backend.trackActive ? Color.blue : Color(UIColor.systemGray4)))
@@ -184,8 +194,8 @@ struct CustomizeView: View {
 
                 Button(action: {
                     Haptic.medium()
-                    var t = Transaction(); t.animation = nil
-                    withTransaction(t) { backend.selectPreset(p.id) }
+                    // Removed transaction animation disabling
+                    backend.selectPreset(p.id)
                 }) {
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 4) {
@@ -301,8 +311,8 @@ struct ResponsiveSelector: View {
 
     private var dropdownMenu: some View {
         Menu {
-            ForEach(0..<items.count, id: \.self) { i in
-                Button(items[i]) {
+            ForEach(Array(items.enumerated()), id: \.offset) { i, item in
+                Button(item) {
                     Haptic.light()
                     selectedIndex = i
                 }
@@ -338,20 +348,22 @@ struct Selector: UIViewRepresentable {
 
     func updateUIView(_ uiView: UISegmentedControl, context: Context) {
         context.coordinator.parent = self
-        UIView.performWithoutAnimation {
-            if uiView.numberOfSegments != items.count {
-                uiView.removeAllSegments()
-                for (i, title) in items.enumerated() {
-                    uiView.insertSegment(withTitle: title, at: i, animated: false)
-                }
-            } else {
-                for (i, title) in items.enumerated() {
-                    uiView.setTitle(title, forSegmentAt: i)
-                }
+        
+        // Removed UIView.performWithoutAnimation
+        if uiView.numberOfSegments != items.count {
+            uiView.removeAllSegments()
+            for (i, title) in items.enumerated() {
+                uiView.insertSegment(withTitle: title, at: i, animated: false)
             }
-            uiView.selectedSegmentIndex = selectedIndex
-            uiView.layoutIfNeeded()
+        } else {
+            for (i, title) in items.enumerated() {
+                uiView.setTitle(title, forSegmentAt: i)
+            }
         }
+        
+        let safeIndex = items.indices.contains(selectedIndex) ? selectedIndex : UISegmentedControl.noSegment
+        
+        uiView.selectedSegmentIndex = safeIndex
         uiView.apportionsSegmentWidthsByContent = !evenlySpaced
     }
 
@@ -360,7 +372,11 @@ struct Selector: UIViewRepresentable {
     class Coordinator: NSObject {
         var parent: Selector
         init(_ parent: Selector) { self.parent = parent }
-        @objc func changed(_ sc: UISegmentedControl) { parent.selectedIndex = sc.selectedSegmentIndex; Haptic.light() }
+        
+        @objc func changed(_ sc: UISegmentedControl) {
+            parent.selectedIndex = sc.selectedSegmentIndex
+            Haptic.light()
+        }
     }
 }
 
